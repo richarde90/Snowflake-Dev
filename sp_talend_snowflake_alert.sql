@@ -1,3 +1,4 @@
+-- V1.0 sp_talend_snowflake_alert.sql -- Author: Richard Elms 
 -- This procedure is utilising the SYSTEM$SEND_EMAIL procedure which is in testing but available to all Snowflake accounts now. I have utilised this procedure to allow for dynamic email alerts from any Snowflake table, in this example it is a table containing Talend job log information but it could be based on any underlying log table and the logic for alerting is also configurable. In this context it is running a basic comparison on rows loaded. 
 
 /* Prerequisite Supporting Elements - Notification Integration
