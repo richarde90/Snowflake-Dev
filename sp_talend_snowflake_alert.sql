@@ -1,3 +1,21 @@
+-- This procedure is utilising the SYSTEM$SEND_EMAIL procedure which is in testing but available to all Snowflake accounts now. I have utilised this procedure to allow for dynamic email alerts from any Snowflake table, in this example it is a table containing Talend job log information but it could be based on any underlying log table and the logic for alerting is also configurable. In this context it is running a basic comparison on rows loaded. 
+
+/* Prerequisite Supporting Elements - Notification Integration
+
+CREATE OR REPLACE NOTIFICATION INTEGRATION INTEGRATION_NAME
+  TYPE = EMAIL
+  ENABLED = TRUE
+  ALLOWED_RECIPIENTS = ('example@email.com');
+
+create or replace TABLE ALERTPROCESSING ( 
+   unique_id VARCHAR(128) NOT NULL, 
+   LOADJOB VARCHAR(128), 
+   ROWSLOADED NUMBER(38,0), 
+   STATUS VARCHAR(128), 
+   LOADDATETIME DATE, 
+   ROWSLOADEDMEDIAN int,
+   PROCESSINGSTATUS VARCHAR(128), primary key (unique_id) 
+);
 
    
 CREATE PROCEDURE tlnd_median_alerts()                                                                                          -- Should this be specific to one alert or a catch-all for all criteria? Maybe log the alert reason into the AlertProcessing table?
@@ -47,23 +65,6 @@ FOR x in cur DO
     loaddate := x.loaddatetime;
     jobstatus := x.status;
 
-
-CREATE OR REPLACE NOTIFICATION INTEGRATION INTEGRATION_DBA
-  TYPE = EMAIL
-  ENABLED = TRUE
-  ALLOWED_RECIPIENTS = ('example@email.com');
-
-
-CALL SYSTEM$SEND_EMAIL(
-    'INTEGRATION_DBA',
-    'example@email.com',
-    'Example Subject',
-    'Email Body'
-);
-
-
-
-
     CALL SYSTEM$SEND_EMAIL(                                                                                                     -- SEND_EMAIL Proc which enables us to push the above information through via email. The body and subject are dynamically populated by bind variables for each loop.
         'de_email',
         'example@email.com',
@@ -71,27 +72,7 @@ CALL SYSTEM$SEND_EMAIL(
         'The job ' || :jobname || ' has ran 50% above or below the median for rows loaded. Loading ' || :loadcount || ' at ' || :loaddate || ' with the status ' || :jobstatus || '. If this was expected, the criteria for failure may need configuring further. This alert was sent from Snowflake (DATABASE.LOG.TLND_MEDIAN_ALERTS())'
     );
 
-
-
-
-
-
-
     UPDATE DATABASE.LOG.ALERTPROCESSING a SET ProcessingStatus = 'Processed' WHERE a.unique_id = :hashval;                      -- Once sent, the current unique ID for the alert row is flagged as processed. 
        
   END FOR;  -- End Looping Component when the cursor is exhausted.
 END;        
-       
-       /* This is the Alert Processing Table DDL 
-       
-       create or replace TABLE ALERTPROCESSING ( 
-unique_id VARCHAR(128) NOT NULL, 
-LOADJOB VARCHAR(128), 
-ROWSLOADED NUMBER(38,0), 
-STATUS VARCHAR(128), 
-LOADDATETIME DATE, 
-ROWSLOADEDMEDIAN int,
-PROCESSINGSTATUS VARCHAR(128), primary key (unique_id) );
-
-     */
-
